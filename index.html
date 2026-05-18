@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>US Sector ETF Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      padding: 16px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      color: #58a6ff;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .controls label { font-size: 0.9rem; color: #8b949e; }
+    .controls select, .controls button {
+      background: #161b22;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .controls button {
+      background: #1f6feb;
+      border-color: #388bfd;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .controls button:hover { background: #388bfd; }
+    #status {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-bottom: 10px;
+      min-height: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 680px)  { .grid { grid-template-columns: 1fr; } }
+    .chart-box {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .chart-inner { width: 100%; height: 300px; }
+  </style>
+</head>
+<body>
+  <h1>🇺🇸 US Sector ETF Dashboard</h1>
+  <div class="controls">
+    <label>時間範圍：
+      <select id="rangeSelect">
+        <option value="3">最近 3 個月</option>
+        <option value="6" selected>最近 6 個月</option>
+      </select>
+    </label>
+    <button id="refreshBtn" onclick="fetchAll()">🔄 Refresh Data</button>
+  </div>
+  <div id="status">載入中…</div>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const TICKERS = [
+      { sym: 'XLE', name: 'Energy' },
+      { sym: 'XLF', name: 'Financials' },
+      { sym: 'XLP', name: 'Consumer Staples' },
+      { sym: 'XLC', name: 'Comm Services' },
+      { sym: 'XLV', name: 'Health Care' },
+      { sym: 'XLRE', name: 'Real Estate' },
+      { sym: 'XLI', name: 'Industrials' },
+      { sym: 'XLY', name: 'Cons Discretionary' },
+      { sym: 'XLK', name: 'Technology' },
+      { sym: 'XLU', name: 'Utilities' },
+      { sym: 'XLB', name: 'Materials' },
+    ];
+
+    const COLORS = [
+      '#00bfff','#32cd32','#ff6347','#ffa500','#da70d6',
+      '#00ced1','#ff69b4','#adff2f','#1e90ff','#ffd700','#ff8c00'
+    ];
+
+    const layout_base = {
+      paper_bgcolor: '#161b22',
+      plot_bgcolor: '#0d1117',
+      font: { color: '#c9d1d9', size: 10 },
+      margin: { l: 50, r: 14, t: 36, b: 36 },
+      legend: { font: { size: 9 }, bgcolor: 'rgba(0,0,0,0)', x: 0, y: 1 },
+      xaxis: { gridcolor: '#21262d', showgrid: true, color: '#8b949e', tickfont: { size: 9 } },
+      yaxis: { gridcolor: '#21262d', showgrid: true, color: '#8b949e', tickfont: { size: 9 } },
+      hovermode: 'x unified',
+    };
+
+    function sma(arr, n) {
+      return arr.map((_, i) => {
+        if (i < n - 1) return null;
+        const slice = arr.slice(i - n + 1, i + 1);
+        return slice.reduce((a, b) => a + b, 0) / n;
+      });
+    }
+
+    function getStartDate(months) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - months);
+      return d.toISOString().split('T')[0];
+    }
+
+    async function fetchTicker(sym, months) {
+      const start = getStartDate(months);
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=${months}mo&includePrePost=false`;
+      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxy);
+      const wrapper = await res.json();
+      const data = JSON.parse(wrapper.contents);
+      const result = data.chart.result[0];
+      const ts = result.timestamp.map(t => new Date(t * 1000).toISOString().split('T')[0]);
+      const close = result.indicators.quote[0].close;
+      const volume = result.indicators.quote[0].volume;
+      return { dates: ts, close, volume };
+    }
+
+    function buildChart(divId, sym, name, color, dates, close, volume) {
+      const ma10 = sma(close, 10);
+      const ma20 = sma(close, 20);
+
+      const traces = [
+        {
+          x: dates, y: close, name: sym,
+          type: 'scatter', mode: 'lines',
+          line: { color, width: 1.8 },
+          yaxis: 'y',
+        },
+        {
+          x: dates, y: ma10, name: '10MA',
+          type: 'scatter', mode: 'lines',
+          line: { color: '#ffd700', width: 1.2, dash: 'dash' },
+          yaxis: 'y',
+        },
+        {
+          x: dates, y: ma20, name: '20MA',
+          type: 'scatter', mode: 'lines',
+          line: { color: '#ff6b6b', width: 1.2, dash: 'dot' },
+          yaxis: 'y',
+        },
+        {
+          x: dates, y: volume, name: 'Volume',
+          type: 'bar',
+          marker: { color: 'rgba(88,166,255,0.25)' },
+          yaxis: 'y2',
+        },
+      ];
+
+      const layout = {
+        ...layout_base,
+        title: { text: `${sym} · ${name}`, font: { size: 12, color: '#e6edf3' }, x: 0.5 },
+        yaxis: { ...layout_base.yaxis, domain: [0.28, 1] },
+        yaxis2: {
+          domain: [0, 0.24],
+          gridcolor: '#21262d',
+          color: '#8b949e',
+          tickfont: { size: 8 },
+          showgrid: false,
+        },
+      };
+
+      Plotly.react(divId, traces, layout, { responsive: true, displayModeBar: false });
+    }
+
+    async function fetchAll() {
+      const months = parseInt(document.getElementById('rangeSelect').value);
+      const status = document.getElementById('status');
+      status.textContent = '⏳ 正在抓取最新數據…';
+      document.getElementById('refreshBtn').disabled = true;
+
+      let done = 0;
+      const promises = TICKERS.map(async ({ sym, name }, i) => {
+        try {
+          const { dates, close, volume } = await fetchTicker(sym, months);
+          buildChart(`chart-${sym}`, sym, name, COLORS[i % COLORS.length], dates, close, volume);
+          done++;
+          status.textContent = `⏳ 載入中… ${done}/${TICKERS.length}`;
+        } catch (e) {
+          console.error(sym, e);
+          status.textContent = `⚠️ ${sym} 載入失敗，請稍後重試`;
+        }
+      });
+
+      await Promise.all(promises);
+      const now = new Date().toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong' });
+      status.textContent = `✅ 最後更新：${now} (HKT)`;
+      document.getElementById('refreshBtn').disabled = false;
+    }
+
+    // Build grid divs
+    const grid = document.getElementById('grid');
+    TICKERS.forEach(({ sym, name }) => {
+      const box = document.createElement('div');
+      box.className = 'chart-box';
+      box.innerHTML = `<div id="chart-${sym}" class="chart-inner"></div>`;
+      grid.appendChild(box);
+    });
+
+    // Initial load
+    fetchAll();
+
+    // Auto-refresh every 5 minutes
+    setInterval(fetchAll, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
