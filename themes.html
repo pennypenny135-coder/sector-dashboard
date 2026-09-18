@@ -1,74 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-HK">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>High Beta Trends</title>
 <style>
-  :root {
-    --bg: #0b0f14;
-    --panel: #121821;
-    --line: #1e2a38;
-    --text: #e8eef6;
-    --muted: #8b9bb0;
-    --accent: #5eead4;
-    --up: #34d399;
-    --down: #f87171;
-  }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    margin: 0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding: 16px;
   }
-  header {
+  h1 {
+    text-align: center;
+    font-size: 1.4rem;
+    color: #58a6ff;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .sub {
+    text-align: center;
+    color: #8b949e;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  .nav {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 0;
-    background: rgba(11,15,20,.92);
-    backdrop-filter: blur(8px);
-    z-index: 5;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
   }
-  h1 { margin: 0; font-size: 18px; font-weight: 650; }
-  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  nav { display: flex; gap: 8px; }
-  nav a {
-    color: var(--muted);
+  .nav a {
+    color: #8b949e;
     text-decoration: none;
-    padding: 8px 12px;
+    padding: 6px 12px;
     border-radius: 8px;
-    border: 1px solid transparent;
-    font-size: 13px;
+    border: 1px solid #30363d;
+    font-size: 0.85rem;
   }
-  nav a.active, nav a:hover {
-    color: var(--text);
-    border-color: var(--line);
-    background: var(--panel);
+  .nav a.active, .nav a:hover {
+    color: #e6edf3;
+    border-color: #58a6ff;
+    background: #161b22;
   }
-  .wrap { padding: 16px 20px 32px; max-width: 1400px; margin: 0 auto; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
   .chip {
-    border: 1px solid var(--line);
-    background: var(--panel);
-    color: var(--text);
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
     border-radius: 999px;
-    padding: 7px 12px;
+    padding: 6px 12px;
     cursor: pointer;
     font-size: 12px;
   }
-  .chip.active { border-color: var(--accent); color: var(--accent); }
+  .chip.active { border-color: #58a6ff; color: #58a6ff; }
   .main-chart {
     height: 520px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid #21262d;
+    border-radius: 10px;
     overflow: hidden;
-    background: #000;
+    background: #161b22;
     margin-bottom: 16px;
   }
   .grid {
@@ -77,10 +75,10 @@
     gap: 12px;
   }
   .card {
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid #21262d;
+    border-radius: 10px;
     overflow: hidden;
-    background: var(--panel);
+    background: #161b22;
     cursor: pointer;
   }
   .card h3 {
@@ -92,28 +90,22 @@
   .card p {
     margin: 2px 0 8px;
     padding: 0 12px;
-    color: var(--muted);
+    color: #8b949e;
     font-size: 11px;
   }
   .mini { height: 180px; }
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>High Beta Trends</h1>
-    <div class="sub">Watchlist charts · 3M minis · click a ticker for the large daily chart</div>
-  </div>
-  <nav>
+  <h1>High Beta Trends</h1>
+  <div class="sub">12 隻觀察名單 · 下面全部 3M 圖一齊睇 · 撞 ticker 先換上面大圖</div>
+  <nav class="nav">
     <a href="./index.html">Sectors</a>
     <a class="active" href="./themes.html">High Beta</a>
   </nav>
-</header>
-<div class="wrap">
   <div class="chips" id="chips"></div>
   <div class="main-chart" id="mainChart"></div>
   <div class="grid" id="grid"></div>
-</div>
 <script>
 const HIGH_BETA = [
   { ticker: "SMH", theme: "Semis", tv: "NASDAQ:SMH" },
@@ -166,7 +158,7 @@ function renderMain(symbol) {
       theme: "dark",
       style: "1",
       locale: "en",
-      backgroundColor: "#0b0f14",
+      backgroundColor: "#0d1117",
       hide_top_toolbar: false,
       hide_legend: false,
       allow_symbol_change: false,
@@ -190,7 +182,6 @@ function render() {
     chip.textContent = item.ticker + " · " + item.theme;
     chip.onclick = () => renderMain(item.tv);
     chips.appendChild(chip);
-
     const card = document.createElement("div");
     card.className = "card";
     card.onclick = () => {

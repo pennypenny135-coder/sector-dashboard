@@ -89,7 +89,7 @@
   </style>
 </head>
 <body>
-  <h1>🇺🇸 US Sector ETF Dashboard</h1>
+  <h1>US Sector ETF Dashboard</h1>
   <nav class="nav">
     <a class="active" href="./index.html">Sectors</a>
     <a href="./themes.html">High Beta</a>
@@ -101,7 +101,7 @@
         <option value="6" selected>最近 6 個月</option>
       </select>
     </label>
-    <button id="refreshBtn" onclick="fetchAll()">🔄 Refresh Data</button>
+    <button id="refreshBtn" onclick="fetchAll()">Refresh Data</button>
   </div>
   <div id="status">載入中…</div>
   <div class="grid" id="grid"></div>
@@ -145,19 +145,10 @@
       });
     }
 
-    function getStartDate(months) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - months);
-      return d.toISOString().split('T')[0];
-    }
-
     async function fetchTicker(sym, months) {
-      const start = getStartDate(months);
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=${months}mo&includePrePost=false`;
-      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxy);
-      const wrapper = await res.json();
-      const data = JSON.parse(wrapper.contents);
+      const res = await fetch(`/api/chart?sym=${encodeURIComponent(sym)}&range=${months}mo`);
+      if (!res.ok) throw new Error('chart http ' + res.status);
+      const data = await res.json();
       const result = data.chart.result[0];
       const ts = result.timestamp.map(t => new Date(t * 1000).toISOString().split('T')[0]);
       const close = result.indicators.quote[0].close;
@@ -168,7 +159,6 @@
     function buildChart(divId, sym, name, color, dates, close, volume) {
       const ma10 = sma(close, 10);
       const ma20 = sma(close, 20);
-
       const traces = [
         {
           x: dates, y: close, name: sym,
@@ -195,7 +185,6 @@
           yaxis: 'y2',
         },
       ];
-
       const layout = {
         ...layout_base,
         title: { text: `${sym} · ${name}`, font: { size: 12, color: '#e6edf3' }, x: 0.5 },
@@ -208,48 +197,41 @@
           showgrid: false,
         },
       };
-
       Plotly.react(divId, traces, layout, { responsive: true, displayModeBar: false });
     }
 
     async function fetchAll() {
       const months = parseInt(document.getElementById('rangeSelect').value);
       const status = document.getElementById('status');
-      status.textContent = '⏳ 正在抓取最新數據…';
+      status.textContent = '正在抓取最新數據…';
       document.getElementById('refreshBtn').disabled = true;
-
       let done = 0;
       const promises = TICKERS.map(async ({ sym, name }, i) => {
         try {
           const { dates, close, volume } = await fetchTicker(sym, months);
           buildChart(`chart-${sym}`, sym, name, COLORS[i % COLORS.length], dates, close, volume);
           done++;
-          status.textContent = `⏳ 載入中… ${done}/${TICKERS.length}`;
+          status.textContent = `載入中… ${done}/${TICKERS.length}`;
         } catch (e) {
           console.error(sym, e);
-          status.textContent = `⚠️ ${sym} 載入失敗，請稍後重試`;
+          status.textContent = `${sym} 載入失敗，請稍後重試`;
         }
       });
-
       await Promise.all(promises);
       const now = new Date().toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong' });
-      status.textContent = `✅ 最後更新：${now} (HKT)`;
+      status.textContent = `最後更新：${now} (HKT)`;
       document.getElementById('refreshBtn').disabled = false;
     }
 
-    // Build grid divs
     const grid = document.getElementById('grid');
-    TICKERS.forEach(({ sym, name }) => {
+    TICKERS.forEach(({ sym }) => {
       const box = document.createElement('div');
       box.className = 'chart-box';
       box.innerHTML = `<div id="chart-${sym}" class="chart-inner"></div>`;
       grid.appendChild(box);
     });
 
-    // Initial load
     fetchAll();
-
-    // Auto-refresh every 5 minutes
     setInterval(fetchAll, 5 * 60 * 1000);
   </script>
 </body>
