@@ -39,6 +39,31 @@
       border-color: #58a6ff;
       background: #161b22;
     }
+    .gauge-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .gauge {
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid #30363d;
+      background: #161b22;
+    }
+    .gauge.on { color: #3fb950; border-color: #238636; }
+    .gauge.off { color: #f85149; border-color: #a40e26; }
+    .gauge.mixed { color: #e3b341; border-color: #9e6a03; }
+    .gauge-note {
+      font-size: 0.75rem;
+      color: #8b949e;
+      max-width: 420px;
+      text-align: center;
+    }
     .controls {
       display: flex;
       justify-content: center;
@@ -94,6 +119,12 @@
     <a class="active" href="./index.html">Sectors</a>
     <a href="./themes.html">High Beta</a>
   </nav>
+  <div class="gauge-wrap">
+    <div id="gauge" class="gauge mixed">Risk: Mixed</div>
+  </div>
+  <div class="gauge-note">
+    計法：XLY（非必需消費）1 個月回報 − XLP（必需消費）1 個月回報。差 > +1.5% 為 On，< −1.5% 為 Off，否則 Mixed。
+  </div>
   <div class="controls">
     <label>時間範圍：
       <select id="rangeSelect">
@@ -200,15 +231,38 @@
       Plotly.react(divId, traces, layout, { responsive: true, displayModeBar: false });
     }
 
+    function ret1m(close) {
+      if (close.length < 21) return 0;
+      return (close[close.length-1] / close[close.length-21] - 1);
+    }
+
+    function setGauge(xlyRet, xlpRet) {
+      const diff = xlyRet - xlpRet;
+      const gauge = document.getElementById('gauge');
+      if (diff > 0.015) {
+        gauge.className = 'gauge on';
+        gauge.textContent = 'Risk: On';
+      } else if (diff < -0.015) {
+        gauge.className = 'gauge off';
+        gauge.textContent = 'Risk: Off';
+      } else {
+        gauge.className = 'gauge mixed';
+        gauge.textContent = 'Risk: Mixed';
+      }
+    }
+
     async function fetchAll() {
       const months = parseInt(document.getElementById('rangeSelect').value);
       const status = document.getElementById('status');
       status.textContent = '正在抓取最新數據…';
       document.getElementById('refreshBtn').disabled = true;
+
       let done = 0;
+      const cache = {};
       const promises = TICKERS.map(async ({ sym, name }, i) => {
         try {
           const { dates, close, volume } = await fetchTicker(sym, months);
+          cache[sym] = { dates, close, volume };
           buildChart(`chart-${sym}`, sym, name, COLORS[i % COLORS.length], dates, close, volume);
           done++;
           status.textContent = `載入中… ${done}/${TICKERS.length}`;
@@ -217,7 +271,15 @@
           status.textContent = `${sym} 載入失敗，請稍後重試`;
         }
       });
+
       await Promise.all(promises);
+
+      if (cache['XLY'] && cache['XLP']) {
+        const xlyRet = ret1m(cache['XLY'].close);
+        const xlpRet = ret1m(cache['XLP'].close);
+        setGauge(xlyRet, xlpRet);
+      }
+
       const now = new Date().toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong' });
       status.textContent = `最後更新：${now} (HKT)`;
       document.getElementById('refreshBtn').disabled = false;
