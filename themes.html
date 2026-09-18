@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>High Beta Trends</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --line: #1e2a38;
+    --text: #e8eef6;
+    --muted: #8b9bb0;
+    --accent: #5eead4;
+    --up: #34d399;
+    --down: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: rgba(11,15,20,.92);
+    backdrop-filter: blur(8px);
+    z-index: 5;
+  }
+  h1 { margin: 0; font-size: 18px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  nav { display: flex; gap: 8px; }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 13px;
+  }
+  nav a.active, nav a:hover {
+    color: var(--text);
+    border-color: var(--line);
+    background: var(--panel);
+  }
+  .wrap { padding: 16px 20px 32px; max-width: 1400px; margin: 0 auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .chip.active { border-color: var(--accent); color: var(--accent); }
+  .main-chart {
+    height: 520px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--panel);
+    cursor: pointer;
+  }
+  .card h3 {
+    margin: 0;
+    padding: 10px 12px 0;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .card p {
+    margin: 2px 0 8px;
+    padding: 0 12px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .mini { height: 180px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>High Beta Trends</h1>
+    <div class="sub">Watchlist charts · 3M minis · click a ticker for the large daily chart</div>
+  </div>
+  <nav>
+    <a href="./index.html">Sectors</a>
+    <a class="active" href="./themes.html">High Beta</a>
+  </nav>
+</header>
+<div class="wrap">
+  <div class="chips" id="chips"></div>
+  <div class="main-chart" id="mainChart"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+const HIGH_BETA = [
+  { ticker: "SMH", theme: "Semis", tv: "NASDAQ:SMH" },
+  { ticker: "IGV", theme: "Software", tv: "AMEX:IGV" },
+  { ticker: "HACK", theme: "Cyber", tv: "AMEX:HACK" },
+  { ticker: "LYTE", theme: "Photonics", tv: "CBOE:LYTE" },
+  { ticker: "UFO", theme: "Space", tv: "NASDAQ:UFO" },
+  { ticker: "ARKG", theme: "Genomics", tv: "AMEX:ARKG" },
+  { ticker: "ARKK", theme: "Innovation", tv: "AMEX:ARKK" },
+  { ticker: "SPMO", theme: "S&P Momentum", tv: "AMEX:SPMO" },
+  { ticker: "SPGI", theme: "S&P Global", tv: "NYSE:SPGI" },
+  { ticker: "COPX", theme: "Copper", tv: "AMEX:COPX" },
+  { ticker: "GDXJ", theme: "Junior Gold Miners", tv: "AMEX:GDXJ" },
+  { ticker: "JETS", theme: "Airlines", tv: "AMEX:JETS" }
+];
+
+let selected = HIGH_BETA[0].tv;
+
+function loadTvScript(src, config, mount) {
+  mount.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "tradingview-widget-container";
+  wrap.style.height = "100%";
+  wrap.style.width = "100%";
+  const widget = document.createElement("div");
+  widget.className = "tradingview-widget-container__widget";
+  widget.style.height = "100%";
+  widget.style.width = "100%";
+  const script = document.createElement("script");
+  script.src = src;
+  script.async = true;
+  script.text = JSON.stringify(config);
+  wrap.appendChild(widget);
+  wrap.appendChild(script);
+  mount.appendChild(wrap);
+}
+
+function renderMain(symbol) {
+  selected = symbol;
+  document.querySelectorAll(".chip").forEach(el => {
+    el.classList.toggle("active", el.dataset.tv === symbol);
+  });
+  loadTvScript(
+    "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js",
+    {
+      autosize: true,
+      symbol,
+      interval: "D",
+      timezone: "America/New_York",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "#0b0f14",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      allow_symbol_change: false,
+      calendar: false,
+      studies: ["MASimple@tv-basicstudies", "Volume@tv-basicstudies"],
+      support_host: "https://www.tradingview.com"
+    },
+    document.getElementById("mainChart")
+  );
+}
+
+function render() {
+  const chips = document.getElementById("chips");
+  const grid = document.getElementById("grid");
+  chips.innerHTML = "";
+  grid.innerHTML = "";
+  HIGH_BETA.forEach((item, i) => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (i === 0 ? " active" : "");
+    chip.dataset.tv = item.tv;
+    chip.textContent = item.ticker + " · " + item.theme;
+    chip.onclick = () => renderMain(item.tv);
+    chips.appendChild(chip);
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.onclick = () => {
+      renderMain(item.tv);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    card.innerHTML = `<h3>${item.ticker}</h3><p>${item.theme}</p><div class="mini" id="mini-${item.ticker}"></div>`;
+    grid.appendChild(card);
+    loadTvScript(
+      "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js",
+      {
+        symbol: item.tv,
+        width: "100%",
+        height: "180",
+        locale: "en",
+        dateRange: "3M",
+        colorTheme: "dark",
+        isTransparent: true,
+        autosize: false,
+        largeChartUrl: ""
+      },
+      document.getElementById("mini-" + item.ticker)
+    );
+  });
+  renderMain(selected);
+}
+
+render();
+</script>
+</body>
+</html>
