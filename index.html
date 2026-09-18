@@ -20,6 +20,25 @@
       margin-bottom: 8px;
       letter-spacing: 1px;
     }
+    .nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .nav a {
+      color: #8b949e;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      font-size: 0.85rem;
+    }
+    .nav a.active, .nav a:hover {
+      color: #e6edf3;
+      border-color: #58a6ff;
+      background: #161b22;
+    }
     .controls {
       display: flex;
       justify-content: center;
@@ -71,6 +90,10 @@
 </head>
 <body>
   <h1>🇺🇸 US Sector ETF Dashboard</h1>
+  <nav class="nav">
+    <a class="active" href="./index.html">Sectors</a>
+    <a href="./themes.html">High Beta</a>
+  </nav>
   <div class="controls">
     <label>時間範圍：
       <select id="rangeSelect">
